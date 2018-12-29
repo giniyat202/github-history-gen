@@ -7,19 +7,23 @@ import {
   Row,
   Col,
   Button,
-  Container
+  Container,
+  Input
 } from 'reactstrap';
 import moment from 'moment';
 import 'bootstrap/dist/css/bootstrap.css';
 import _ from 'lodash';
 import Heatmap from './ModifiedCalendarHeatmap';
+const {ipcRenderer} = window.require('electron');
 
 class App extends Component {
   constructor(props) {
     super(props);
     let year = moment().year();
     this.state = {
-      ...this.setYear(year)
+      ...this.setYear(year),
+      name: '',
+      email: '',
     };
     this.handleYearChange = this.handleYearChange.bind(this);
     this.handleClick = this.handleClick.bind(this);
@@ -28,6 +32,14 @@ class App extends Component {
     this.handleSave = this.handleSave.bind(this);
     this.handleLoad = this.handleLoad.bind(this);
     this.handleExport = this.handleExport.bind(this);
+    this.handleLoadResponse = this.handleLoadResponse.bind(this);
+    this.handleChange = this.handleChange.bind(this);
+  }
+  componentDidMount() {
+    ipcRenderer.on('load-response', this.handleLoadResponse);
+  }
+  componentWillUnmount() {
+    ipcRenderer.removeListener('load-response', this.handleLoadResponse);
   }
   handleYearChange(e) {
     this.setState({
@@ -47,13 +59,40 @@ class App extends Component {
     });
   }
   handleSave() {
-
+    ipcRenderer.send('save', {
+      year: this.state.year,
+      data: this.state.data
+    });
   }
   handleLoad() {
-
+    ipcRenderer.send('load');
   }
   handleExport() {
-
+    const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    if (this.state.name === '')
+      alert('Please enter your name');
+    else if (this.state.email === '')
+      alert('Please enter your email');
+    else if (!emailRegex.test(this.state.email))
+      alert('Please enter a valid email address');
+    else {
+      ipcRenderer.send('export', {
+        year: this.state.year,
+        data: this.state.data,
+        name: this.state.name,
+        email: this.state.email
+      });
+    }
+  }
+  handleLoadResponse(event, arg) {
+    this.setState({
+      ...arg
+    });
+  }
+  handleChange(e) {
+    this.setState({
+      [e.target.name]: e.target.value
+    });
   }
   setYear(year) {
     return {
@@ -106,6 +145,24 @@ class App extends Component {
               </FormGroup>
               <FormGroup>
                 <Button color="info" onClick={this.handleLoad}>Load</Button>
+              </FormGroup>
+              <FormGroup>
+                <Input
+                  type="text"
+                  name="name"
+                  placeholder="Name"
+                  value={this.state.name}
+                  onChange={this.handleChange}
+                />
+              </FormGroup>
+              <FormGroup>
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  value={this.state.email}
+                  onChange={this.handleChange}
+                />
               </FormGroup>
               <FormGroup>
                 <Button color="warning" onClick={this.handleExport}>Export</Button>
