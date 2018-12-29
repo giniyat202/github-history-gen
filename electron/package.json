@@ -5,10 +5,12 @@
     "start": "electron ."
   },
   "dependencies": {
-    "electron": "=3.0.0",
     "moment": "^2.23.0",
     "nodegit": "^0.23.0",
     "rimraf": "^2.6.2"
+  },
+  "devDependencies": {
+    "electron": "=3.0.0"
   },
   "private": true
 }

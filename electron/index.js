@@ -2,10 +2,11 @@ const {
   app,
   BrowserWindow,
   ipcMain,
-  dialog
+  dialog,
+  protocol
 } = require('electron');
 const fs = require('fs');
-const {join} = require('path');
+const {join, normalize} = require('path');
 const {promisify} = require('util');
 const rimraf = promisify(require('rimraf'));
 const Git = require('nodegit');
@@ -23,7 +24,11 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-  mainWindow.loadURL('http://localhost:3000/');
+  let webpack_server = join(__dirname, '.webpack_server');
+  if (fs.existsSync(webpack_server))
+    mainWindow.loadURL(fs.readFileSync(webpack_server, 'utf8'));
+  else
+    mainWindow.loadURL('file:///index.html');
 }
 
 function save(event, arg) {
@@ -109,6 +114,17 @@ function exportToRepo(event, arg) {
 }
 
 app.on('ready', () => {
+  protocol.interceptFileProtocol('file', (request, callback) => {
+    let url = request.url.substr(7);
+    callback({
+      path: normalize(`${__dirname}/app/${url}`)
+    });
+  }, err => {
+    if (err) {
+      dialog.showErrorBox('Error', err.message);
+      process.exit();
+    }
+  });
   createWindow();
   ipcMain.on('save', save);
   ipcMain.on('load', load);
